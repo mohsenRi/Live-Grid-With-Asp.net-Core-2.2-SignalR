@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SignalRLiveGrid.Data;
+using SignalRLiveGrid.Hubs;
+using SignalRLiveGrid.Service;
 
 namespace SignalRLiveGrid
 {
@@ -30,8 +34,16 @@ namespace SignalRLiveGrid
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-
+            services.AddSignalR();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddDbContext<AppDbContext>(options =>
+                {
+                    options.UseSqlServer(Configuration.GetConnectionString("LiveGridConnection"));
+                }
+            );
+
+            services.AddScoped<IPersonService, PersonService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -48,7 +60,11 @@ namespace SignalRLiveGrid
 
             app.UseStaticFiles();
             app.UseCookiePolicy();
-
+            //define endpoint address for clients app
+            app.UseSignalR(options =>
+            {
+                options.MapHub<GridHub>("/RealTimeGrid");
+            });
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
